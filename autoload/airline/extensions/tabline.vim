@@ -46,6 +46,11 @@ function! s:toggle_off()
   endif
 endfunction
 
+function! airline#extensions#tabline#toggle()
+  let s:show_buffers = s:show_buffers == 1 ? 0 : 1
+  call s:toggle_on()
+endfunction
+
 function! s:toggle_on()
   let [ s:original_tabline, s:original_showtabline ] = [ &tabline, &showtabline ]
 
@@ -93,7 +98,7 @@ function! s:on_cursormove(min_count, total_count)
 endfunction
 
 function! airline#extensions#tabline#get()
-  if s:show_buffers && tabpagenr('$') == 1
+  if s:show_buffers
     return s:get_buffers()
   else
     return s:get_tabs()
@@ -189,11 +194,6 @@ let s:current_tabline = ''
 let s:current_modified = 0
 function! s:get_buffers()
   let cur = bufnr('%')
-  if cur == s:current_bufnr
-    if !g:airline_detect_modified || getbufvar(cur, '&modified') == s:current_modified
-      return s:current_tabline
-    endif
-  endif
 
   let b = airline#builder#new(s:builder_context)
   let tab_bufs = tabpagebuflist(tabpagenr())
@@ -216,12 +216,14 @@ function! s:get_buffers()
         let group = 'airline_tabhid'
       endif
     endif
-    call b.add_section(group, s:spc.'%(%{airline#extensions#tabline#get_buffer_name('.nr.')}%)'.s:spc)
+    call b.add_section(group, s:spc.nr.s:spc.'%(%{airline#extensions#tabline#get_buffer_name('.nr.')}%)'.s:spc)
   endfor
 
   call b.add_section('airline_tabfill', '')
   call b.split()
-  call b.add_section('airline_tabtype', ' buffers ')
+  call b.add_section('airline_tabtype', ' B:'.len(s:get_buffer_list()).' ')
+  call b.split()
+  call b.add_section('airline_tab', ' %999X T:'.tabpagenr('$').' ')
 
   let s:current_bufnr = cur
   let s:current_tabline = b.build()
@@ -231,11 +233,6 @@ endfunction
 function! s:get_tabs()
   let curbuf = bufnr('%')
   let curtab = tabpagenr()
-  if curbuf == s:current_bufnr && curtab == s:current_tabnr
-    if !g:airline_detect_modified || getbufvar(curbuf, '&modified') == s:current_modified
-      return s:current_tabline
-    endif
-  endif
 
   let b = airline#builder#new(s:builder_context)
   for i in range(1, tabpagenr('$'))
@@ -260,15 +257,15 @@ function! s:get_tabs()
         let val .= (g:airline_symbols.space).i
       endif
     endif
-    call b.add_section(group, val.'%'.i.'T %{airline#extensions#tabline#title('.i.')} %)')
+    call b.add_section(group, ' '.i.'%'.'T %{airline#extensions#tabline#title('.i.')} %)')
   endfor
 
   call b.add_raw('%T')
   call b.add_section('airline_tabfill', '')
   call b.split()
-  call b.add_section('airline_tab', ' %999X'.s:close_symbol.' ')
+  call b.add_section('airline_tab', ' %999X B:'.len(s:get_buffer_list()).' ')
   if s:show_tab_type
-    call b.add_section('airline_tabtype', ' tabs ')
+    call b.add_section('airline_tabtype', ' T:'.tabpagenr('$').' ')
   endif
 
   let s:current_bufnr = curbuf
